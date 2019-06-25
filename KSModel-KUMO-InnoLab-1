@@ -1,0 +1,102 @@
+def reward_function(params):
+    '''
+    Example of rewarding the agent to follow center line
+    '''
+    
+    # Read input parameters
+    track_width = params['track_width']
+    distance_from_center = params['distance_from_center']
+    all_wheels_on_track = params['all_wheels_on_track']
+    speed = params['speed']
+    steering = abs(params['steering_angle'])
+    is_left_side = params['is_left_of_center']
+    
+    # Calculate 3 markers that are at varying distances away from the center line
+    #marker_1 = 0.1 * track_width
+    marker_2 = 0.25 * track_width
+    marker_3 = 0.3 * track_width
+    DIRECTION_THRESHOLD = 15.0
+    # Set the speed threshold based your action space 
+    SPEED_THRESHOLD = 6.0
+    # Penalize if car steer too much to prevent zigzag
+    STEERING_THRESHOLD = 20.0
+    
+    headingAndTrackAngleDiff = rewardByWayPointsAndHeading(params)
+    
+    #marker_1 = track_width / 3
+    marker_1 = 0.1 * track_width
+    marker_2 = 0.25 * track_width
+    marker_3 = 0.3 * track_width
+    
+    # Initialize the reward with typical value 
+    reward = 1e-3
+    print("%%%%%%%%%%%%%%%%%%")
+    print("all_wheels_on_track :" + str(all_wheels_on_track))
+    print("headingAndTrackAngleDiff :" + str(headingAndTrackAngleDiff))
+    print("speed :" + str(speed))
+    print("steering :" + str(steering))
+    print("STEERING_THRESHOLD :" + str(STEERING_THRESHOLD))
+    print("distance_from_center :" + str(distance_from_center))
+    print("marker_1 :" + str(marker_1))
+    
+    # Give higher reward if the car is closer to center line and vice versa
+    # Penalize the reward if the difference is too large
+    # Penalize if the car goes off track
+    #if not all_wheels_on_track:
+    #   reward = 1e-3
+    #elif distance_from_center > marker_1 : #or headingAndTrackAngleDiff > 10 :
+    #  reward = 0.5
+        
+    if distance_from_center <= marker_1:
+        reward = 1.0
+    elif distance_from_center <= marker_2 or (steering > 0 and is_left_side):
+        reward = 0.5
+    elif distance_from_center <= marker_3:
+        reward = 0.1
+    #elif (headingAndTrackAngleDiff == 0 and speed < 7) or steering > STEERING_THRESHOLD :
+    #   reward = 0.8
+    #elif headingAndTrackAngleDiff >15 and speed > 2.5:
+    #   reward = 0.1
+    #elif headingAndTrackAngleDiff < 6 and headingAndTrackAngleDiff > -6 and speed < 2:
+    #   reward = 0.3
+    #elif speed < SPEED_THRESHOLD:
+     #   reward = 0.5
+    #else:
+    #   reward = 1.0
+        
+    print("reward :" + str(reward))
+    return float(reward)
+    
+def rewardByWayPointsAndHeading(params):
+    
+    import math
+    
+    waypoints = params['waypoints']
+    closest_waypoints = params['closest_waypoints']
+    heading = params['heading']
+    # Calculate the direction of the center line based on the closest waypoints
+    next_point = waypoints[closest_waypoints[1]]
+    prev_point = waypoints[closest_waypoints[0]]
+
+	# Calculate the direction in radius, arctan2(dy, dx), the result is (-pi, pi) in radians
+    track_direction = math.atan2(next_point[1] - prev_point[1], next_point[0] - prev_point[0])
+	
+    print("track_direction in radians :" + str(track_direction))
+	# Convert to degree
+    track_direction = math.degrees(track_direction)
+    
+    print("track_direction in degrees :" + str(track_direction))
+    print("heading param :" + str(heading))
+    
+    if heading > 180 and heading < 270 :
+        heading = 180 - heading
+    elif heading >= 270 :
+        heading = 360 - heading
+    
+    print("heading param after conversion:" + str(heading))
+	# Calculate the difference between the track direction and the heading direction of the car
+    direction_diff = abs(track_direction - heading)
+    
+    print("next_point1 :" + str(next_point[1]) +"prev_point1"+ str(prev_point[1]))
+    print("next_point0 :" + str(next_point[0]) +"prev_point0"+ str(prev_point[0]))
+    return direction_diff
