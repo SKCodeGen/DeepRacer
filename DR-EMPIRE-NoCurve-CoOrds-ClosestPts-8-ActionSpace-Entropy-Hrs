@@ -1,0 +1,242 @@
+def reward_function(params):
+    '''
+    Example of rewarding the agent to follow center line
+    '''
+    print("%%%%%%%%%%%%%%%%%% Function Start")
+    # Read input parameters
+    distance_from_center = params['distance_from_center']
+    all_wheels_on_track = params['all_wheels_on_track']
+    steering = abs(params['steering_angle'])
+    is_left_of_center = params['is_left_of_center']
+    heading = params['heading']
+    xparam = params['x']
+    yparam = params['y']
+    progress = params['progress']
+    steps = params['steps']
+    speed = params['speed']
+    steering_angle = params['steering_angle']
+    track_width = params['track_width']
+    waypoints = params['waypoints']
+    closest_waypoints = params['closest_waypoints']
+    
+    DIRECTION_THRESHOLD = 20.0
+    # Set the speed threshold based your action space 
+    SPEED_THRESHOLD = 6.0
+    # Penalize if car steer too much to prevent zigzag
+    STEERING_THRESHOLD = 20.0
+    
+    headingAndTrackAngleDiff = rewardByWayPointsAndHeading(params)
+    
+    #marker_1 = track_width / 3
+    marker_1 = 0.1 * track_width
+    marker_2 = 0.25 * track_width
+    marker_3 = 0.44 * track_width
+    marker_4 = 0.5 * track_width
+    
+    curve = findCurve(params)
+    
+    # Initialize the reward with typical value 
+    reward = 1e-3
+    print(" InputParameters: [ ")
+    print("all_wheels_on_track :" + str(all_wheels_on_track))
+    print("xparam :" + str(xparam))
+    print("yparam :" + str(yparam))
+    print("distance_from_center :" + str(distance_from_center))
+    print("is_left_of_center :" + str(is_left_of_center))
+    print("heading :" + str(heading))
+    print("progress :" + str(progress))
+    print("steps :" + str(steps))
+    print("speed :" + str(speed))
+    print("steering_angle :" + str(steering_angle))
+    print("track_width :" + str(track_width))
+    print("waypoints :{" + str(waypoints)+ "}")
+    print("closest_waypoints[0] :{" + str(closest_waypoints[0])+ "} and closest_waypoints[1] :{" + str(closest_waypoints[1])+ "}")
+    print(" ]")
+    
+    print(" DerrivedParameters: [ ")
+    print("headingAndTrackAngleDiff :" + str(headingAndTrackAngleDiff))
+    print("STEERING_THRESHOLD :" + str(STEERING_THRESHOLD))
+    print("marker_1 :" + str(marker_1))
+    print("curve :" + str(curve))
+    print("DIRECTION_THRESHOLD :" + str(DIRECTION_THRESHOLD))
+    print(" ]")
+    
+    # Give higher reward if the car is closer to center line and vice versa
+    # Penalize the reward if the difference is too large
+    # Penalize if the car goes off track
+    #if not all_wheels_on_track:
+    #   reward = 1e-3
+    #elif distance_from_center > marker_1 : #or headingAndTrackAngleDiff > 10 :
+    #  reward = 0.5
+    
+    if distance_from_center > marker_4 :
+        reward = 1e-3
+        print("0000000000")
+    elif (not curve and distance_from_center <= marker_3 and speed > 7.0 and headingAndTrackAngleDiff < DIRECTION_THRESHOLD) or (curve and distance_from_center < marker_3 and speed > 1.0) :
+        reward = 1.0
+        print("1111111111")
+    elif (not curve and distance_from_center <= marker_3 and speed > 5.0 and headingAndTrackAngleDiff < DIRECTION_THRESHOLD) or (curve and distance_from_center < marker_3) :
+        reward = 0.9
+        print("2222222222")
+    elif (not curve and distance_from_center <= marker_3 and speed > 4.0 and headingAndTrackAngleDiff < DIRECTION_THRESHOLD) :
+        reward = 0.8
+        print("3333333333")
+    elif (not curve and distance_from_center <= marker_3 and speed > 2.0 and headingAndTrackAngleDiff < DIRECTION_THRESHOLD) :
+        reward = 0.6
+        print("4444444444")
+    elif distance_from_center <= marker_3 and headingAndTrackAngleDiff < DIRECTION_THRESHOLD :
+        reward = 0.1
+        print("5555555555")
+        
+    #elif headingAndTrackAngleDiff > DIRECTION_THRESHOLD :
+            #(headingAndTrackAngleDiff == 0 and steering != 0) :
+     #   reward = 0.5
+      #  print("333333333")
+    
+    
+    #elif (headingAndTrackAngleDiff == 0 and speed < 7) or steering > STEERING_THRESHOLD :
+     #   reward = 0.8
+      #  print("555555555")
+    #elif headingAndTrackAngleDiff >15 and speed > 2.5:
+    #   reward = 0.1
+    #elif headingAndTrackAngleDiff < 6 and headingAndTrackAngleDiff > -6 and speed < 2:
+    #   reward = 0.3
+    #elif speed < SPEED_THRESHOLD:
+     #   reward = 0.5
+    #else:
+    #   reward = 1.0
+        
+    print("reward :" + str(reward))
+    print("%%%%%%%%%%%%%%%%%% Function End")
+    return float(reward)
+
+def findCurve(params):
+    
+    import math
+    
+    waypoints = params['waypoints']
+    closest_waypoints = params['closest_waypoints']
+    xparam = params['x']
+    yparam = params['y']
+    
+    closestCoordinates = getClosestCoordinates(params)
+    prev_point = closestCoordinates[0]
+    next_point = closestCoordinates[1]
+    
+    print("closest_waypoints :" + str(closest_waypoints))
+    print("prev_point x0:" + str(prev_point[0]))
+    print("prev_point y1:" + str(prev_point[1]))
+    print("next_point x0:" + str(next_point[0]))
+    print("next_point y1:" + str(next_point[1]))
+    
+    track_direction1 = math.atan2(next_point[1] - prev_point[1], next_point[0] - prev_point[0])
+	
+    print("track_direction1 in radians :" + str(track_direction1))
+	# Convert to degree
+    track_direction1 = math.degrees(track_direction1)
+    print("track_direction1 in degrees :" + str(track_direction1))
+    
+    nextNextClosestCoordinate = getNextWayPoint(next_point[0], next_point[1], params)
+    track_direction2 = math.atan2(nextNextClosestCoordinate[1] - next_point[1], nextNextClosestCoordinate[0] - next_point[0])
+	
+    print("track_direction2 in radians :" + str(track_direction2))
+	# Convert to degree
+    track_direction2 = math.degrees(track_direction2)
+    print("track_direction2 in degrees :" + str(track_direction2))
+    
+    track_direction_diff = abs(track_direction1) - abs(track_direction2)
+    print("track_direction_diff :"+ str(track_direction_diff))
+    
+    if ( abs(track_direction_diff) > 3.0):
+        curve = True
+    else:
+        curve = False
+    
+    print("curve :" + str(curve))
+    return curve
+
+def getClosestCoordinates(params):
+    waypoints = params['waypoints']
+    xparam = params['x']
+    yparam = params['y']
+    currentCoordinate = (xparam, yparam)
+    print("getClosestCoordinates/currentCoordinate :" + str(currentCoordinate))
+    
+    i = 0
+    for i in range (0,(len(waypoints)-1)):
+        if(i == 70):
+            nextCoordinate = waypoints[0]
+        else:
+            nextCoordinate = waypoints[i+1]
+        
+        coordinate = waypoints[i]
+        closestCoordinates = [coordinate, nextCoordinate]
+        if((xparam < coordinate[0] and xparam > nextCoordinate[1]) or (xparam > coordinate[0] and xparam < nextCoordinate[1])):
+            break
+        i += 1
+    
+    print("getClosestCoordinates/closestCoordinates :" + str(closestCoordinates))
+    return closestCoordinates
+
+def getPositionOfCoordinateInWaypoints(x, y, params):
+    waypoints = params['waypoints']
+    i = 0
+    for i in range (0,(len(waypoints)-1)):
+        coordinate = waypoints[i]
+        if(coordinate[0] == x and coordinate[1] == y):
+            break
+        i += 1
+        
+    print("getPositionOfCoordinateInWaypoints / coordinate :" + str(waypoints[i]))
+    print("coordinate index :" + str(i))
+    return i
+    
+def getNextWayPoint(x, y, params):
+    waypoints = params['waypoints']
+    maxIndexPosition = len(waypoints)-1
+    
+    indexForCoordinate = getPositionOfCoordinateInWaypoints(x, y, params)
+    nextClosestCoordinate = 0
+    if (indexForCoordinate == maxIndexPosition):
+        nextClosestCoordinate = waypoints[5]
+    else:
+        nextClosestCoordinate = waypoints[indexForCoordinate+5]
+    return nextClosestCoordinate
+    
+def rewardByWayPointsAndHeading(params):
+    
+    import math
+    
+    waypoints = params['waypoints']
+    closest_waypoints = params['closest_waypoints']
+    heading = params['heading']
+    # Calculate the direction of the center line based on the closest waypoints
+    #next_point = waypoints[closest_waypoints[1]]
+    #prev_point = waypoints[closest_waypoints[0]]
+    
+    closestCoordinates = getClosestCoordinates(params)
+    prev_point = closestCoordinates[0]
+    next_point = closestCoordinates[1]
+
+	# Calculate the direction in radius, arctan2(dy, dx), the result is (-pi, pi) in radians
+    track_direction = math.atan2(next_point[1] - prev_point[1], next_point[0] - prev_point[0])
+	
+    print("track_direction in radians :" + str(track_direction))
+	# Convert to degree
+    track_direction = math.degrees(track_direction)
+    
+    print("track_direction in degrees :" + str(track_direction))
+    print("heading param :" + str(heading))
+    print("waypoints :[" + str(waypoints) +"]")
+    
+    '''if heading > 180 and heading < 270 :
+        heading = 180 - abs(heading)
+    elif heading >= 270 :
+        heading = 360 - abs(heading)
+    print("heading param after conversion:" + str(heading))'''
+	# Calculate the difference between the track direction and the heading direction of the car
+    direction_diff = abs(abs(track_direction) - abs(heading))
+    
+    print("next_point1 :" + str(next_point[1]) +"prev_point1"+ str(prev_point[1]))
+    print("next_point0 :" + str(next_point[0]) +"prev_point0"+ str(prev_point[0]))
+    return direction_diff
